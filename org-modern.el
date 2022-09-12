@@ -443,6 +443,10 @@ You can specify a font `:family'. The font families `Iosevka', `Hack' and
      (aref org-modern--star-cache
            (min (1- (length org-modern--star-cache)) level)))))
 
+(defvar-local org-modern--sp-width (list 1))
+(defvar-local org-modern--sp1 (list 'space :width org-modern--sp-width))
+(defvar-local org-modern--sp2 (list 'space :width org-modern--sp-width))
+
 (defun org-modern--table ()
   "Prettify vertical table lines."
   (save-excursion
@@ -450,9 +454,6 @@ You can specify a font `:family'. The font families `Iosevka', `Hack' and
            (end (match-end 0))
            (tbeg (match-beginning 1))
            (tend (match-end 1))
-           ;; Unique objects
-           (sp1 (list 'space :width 1))
-           (sp2 (list 'space :width 1))
            (color (face-attribute 'org-table :foreground nil t))
            (inner (progn
                     (goto-char beg)
@@ -486,7 +487,7 @@ You can specify a font `:family'. The font families `Iosevka', `Hack' and
             ;; TODO Text scaling breaks the table formatting since the space is not scaled accordingly
             (cl-loop for i from a below b do
                      (put-text-property i (1+ i) 'display
-                                        (if (= 0 (mod i 2)) sp1 sp2)))))))))
+                                        (if (= 0 (mod i 2)) org-modern--sp1 org-modern--sp2)))))))))
 
 (defun org-modern--block-name ()
   "Prettify block according to `org-modern-block-name'."
@@ -547,6 +548,10 @@ You can specify a font `:family'. The font families `Iosevka', `Hack' and
           (forward-line)
           t)))))
 
+(defun org-modern--pre-redisplay (_)
+  "Compute font width before redisplay."
+  (setcar org-modern--sp-width (default-font-width)))
+
 ;;;###autoload
 (define-minor-mode org-modern-mode
   "Modern looks for Org."
@@ -554,6 +559,10 @@ You can specify a font `:family'. The font families `Iosevka', `Hack' and
   :group 'org-modern
   (cond
    (org-modern-mode
+    (setq org-modern--sp-width (list nil)
+          org-modern--sp1 (list 'space :width org-modern--sp-width)
+          org-modern--sp2 (list 'space :width org-modern--sp-width))
+    (add-hook 'pre-redisplay-functions #'org-modern--pre-redisplay nil 'local)
     (when (and (fboundp 'fringe-bitmap-p)
                (not (fringe-bitmap-p 'org-modern--block-inner)))
       (let* ((g (ceiling (frame-char-height) 1.8))
@@ -688,7 +697,9 @@ You can specify a font `:family'. The font families `Iosevka', `Hack' and
            (6 '(face nil display " ")))))))
     (font-lock-add-keywords nil org-modern--font-lock-keywords 'append)
     (advice-add #'org-unfontify-region :after #'org-modern--unfontify))
-   (t (font-lock-remove-keywords nil org-modern--font-lock-keywords)))
+   (t
+    (remove-hook 'pre-redisplay-functions #'org-modern--pre-redisplay 'local)
+    (font-lock-remove-keywords nil org-modern--font-lock-keywords)))
   (save-restriction
     (widen)
     (let ((org-modern-mode t))
