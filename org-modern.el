@@ -471,19 +471,23 @@ the font.")
 
 (defun org-modern--star ()
   "Prettify headline stars."
-  (let* ((beg (match-beginning 1))
-         (end (match-end 1))
-         (level (- end beg)))
-    (when (and org-modern--hide-stars-cache (not (eq beg end)))
+  (when org-modern--hide-stars-cache
+    (let ((beg (match-beginning 1))
+          (end (match-end 1)))
       (cl-loop for i from beg below end do
                (put-text-property i (1+ i) 'display
                                   (nth (logand i 1)
-                                       org-modern--hide-stars-cache))))
-    (when org-modern-star
-      (put-text-property
-       (match-beginning 2) (match-end 2) 'display
-       (aref org-modern--star-cache
-             (min (1- (length org-modern--star-cache)) level))))))
+                                       org-modern--hide-stars-cache)))))
+  (when org-modern-star
+    (let* ((beg (match-beginning 0))
+           (end (1- (match-end 0)))
+           (level (1- (min (/ (length org-modern--star-cache) 2) (- end beg)))))
+      (when (or org-modern-hide-stars org-hide-leading-stars)
+        (setq beg (1- end)))
+      (cl-loop for i from beg below end do
+               (put-text-property
+                i (1+ i) 'display
+                (aref org-modern--star-cache (+ (* 2 level) (logand i 1))))))))
 
 (defun org-modern--table ()
   "Prettify vertical table lines."
@@ -657,7 +661,7 @@ the font.")
      '(("^[ \t]*\\(?:[-+*]\\|[0-9]+[.)]\\)[ \t]+\\(\\[[ X-]\\]\\)[ \t]"
         (0 (org-modern--checkbox)))))
    (when (or org-modern-star org-modern-hide-stars)
-     `(("^\\(\\**\\)\\(\\*\\) "
+     `(("^\\(\\**\\)\\* "
         ,@(and (not (eq org-modern-hide-stars t))
                (or org-modern-star (stringp org-modern-hide-stars))
                '((0 (org-modern--star))))
@@ -755,7 +759,10 @@ the font.")
     (add-to-invisibility-spec 'org-modern)
     (setq
      org-modern--star-cache
-     (vconcat (mapcar #'org-modern--symbol org-modern-star))
+     (vconcat (mapcan (lambda (x)
+                        (list (org-modern--symbol x)
+                              (org-modern--symbol x)))
+                      org-modern-star))
      org-modern--hide-stars-cache
      (and (stringp org-modern-hide-stars)
           (list (org-modern--symbol org-modern-hide-stars)
