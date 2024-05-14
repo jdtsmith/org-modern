@@ -441,17 +441,30 @@ the font.")
 	 (end-complete (+ beg-stat complete-chars))
 	 (pad-left (- bar-width complete-chars))
 	 (pad-right (- width pad-left len))
-	 (face-left 'org-modern-progress-bar)
-	 (face-right 'org-modern-progress-bar-incomplete))
-    (when (or (= bar-width 0) (= bar-width width)) ; empty or full bar: special case
-      (setq pad-left ideal-pad pad-right ideal-pad)
-      (if (= bar-width 0) (setq face-left face-right) (setq face-right face-left)))
-    (add-text-properties beg-lbrac end-lbrac `( display (space :width (,pad-left . width))
-						face (org-modern-label ,face-left)))
-    (add-face-text-property beg-stat end-complete face-left)
-    (add-face-text-property end-complete end-stat face-right)
-    (add-text-properties beg-rbrac end-rbrac `( display (space :width (,pad-right . width))
-						face (org-modern-label ,face-right)))))
+	 (shift-right 0) (shift-left 0))
+    (cond ((= complete-chars 0) 	; label pulled left?
+	   (setq shift-right (max 0 (round (- ideal-pad pad-left)))
+		 pad-right (- pad-right shift-right)))
+	  ((= complete-chars len) 	; label pulled right?
+	   (setq shift-left (max 0 (round (- ideal-pad pad-right)))
+		 pad-left (- pad-left shift-left))))
+    (add-text-properties beg-lbrac end-lbrac
+			 `( display (space :width (,pad-left . width))
+			    face org-modern-progress-bar))
+    (if (= shift-right 0)
+	(add-face-text-property beg-stat end-complete 'org-modern-progress-bar)
+      (put-text-property
+       beg-stat (1+ beg-stat) 'display
+       (concat (make-string shift-right ?\s)
+	       (propertize (string (char-after beg-stat)) 'cursor t))))
+    (if (= shift-left 0)
+	(add-face-text-property end-complete end-stat 'org-modern-progress-bar-incomplete)
+      (put-text-property
+       (1- end-stat) end-stat 'display
+       (concat (string (char-before end-stat)) (make-string shift-left ?\s))))
+    (add-text-properties beg-rbrac end-rbrac
+			 `( display (space :width (,pad-right . width))
+			    face org-modern-progress-bar-incomplete))))
 
 (defun org-modern--tag ()
   "Prettify headline tags."
