@@ -290,7 +290,7 @@ the font.")
 
 (defface org-modern-progress
   '((default :inherit (fixed-pitch org-modern-label))
-    (t :weight semi-bold))
+    (t :weight bold))
   "Face used for entire progress bars.")
 
 (defface org-modern-progress-complete
